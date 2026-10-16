@@ -1152,6 +1152,20 @@ func Neonize(db *C.char, id *C.char, JIDByte *C.uchar, JIDSize C.int, newDevice 
 				}
 				eventChan <- &messageEvent
 			}
+		case *events.Lock:
+			if _, ok := subscribers[50]; ok {
+				chatState := defproto.ChatLock{
+					JID:          utils.EncodeJidProto(v.JID),
+					Timestamp:    proto.Int64(v.Timestamp.Unix()),
+					Action:       v.Action,
+					FromFullSync: proto.Bool(v.FromFullSync),
+				}
+				messageEvent := MessageEvent{
+					eventType: 50,
+					message:   &chatState,
+				}
+				eventChan <- &messageEvent
+			}
 		case *events.RotateADVSecret:
 			if _, ok := subscribers[45]; ok {
 				rot := defproto.RotateADVSecret{

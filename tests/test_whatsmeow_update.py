@@ -76,7 +76,7 @@ def test_pair_phone_without_connect_raises_clean_error(tmp_path):
 
 def test_chat_state_events_are_registered():
     from neonize.aioze import events as aio_events
-    from neonize.events import ChatArchiveEv, ChatMarkAsReadEv, ChatMuteEv, ChatPinEv
+    from neonize.events import ChatArchiveEv, ChatLockEv, ChatMarkAsReadEv, ChatMuteEv, ChatPinEv
     from neonize.proto.Neonize_pb2 import ChatArchive
     from neonize.proto.waSyncAction.WAWebProtobufSyncAction_pb2 import ArchiveChatAction
 
@@ -85,6 +85,7 @@ def test_chat_state_events_are_registered():
         (47, "ChatPinEv", ChatPinEv),
         (48, "ChatMuteEv", ChatMuteEv),
         (49, "ChatMarkAsReadEv", ChatMarkAsReadEv),
+        (50, "ChatLockEv", ChatLockEv),
     ):
         assert EVENT_TO_INT[ev] == code
         assert INT_TO_EVENT[code] is ev
