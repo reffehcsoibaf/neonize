@@ -72,3 +72,26 @@ def test_pair_phone_without_connect_raises_clean_error(tmp_path):
     c = NewClient(db_path)
     with pytest.raises(PairPhoneError, match="client is nil"):
         c.PairPhone("1234567890", True)
+
+
+def test_chat_delete_event_is_registered():
+    from neonize.aioze import events as aio_events
+    from neonize.events import ChatDeleteEv
+    from neonize.proto.Neonize_pb2 import ChatDelete
+    from neonize.proto.waSyncAction.WAWebProtobufSyncAction_pb2 import DeleteChatAction
+
+    assert EVENT_TO_INT[ChatDeleteEv] == 51
+    assert INT_TO_EVENT[51] is ChatDeleteEv
+    assert "ChatDeleteEv" in aio_events.__all__ and aio_events.ChatDeleteEv is ChatDeleteEv
+
+    chat = JID(User="5551", RawAgent=0, Device=0, Integrator=0, Server="s.whatsapp.net")
+    evt = ChatDelete(
+        JID=chat,
+        Timestamp=1792000000,
+        FromFullSync=False,
+        DeleteMedia=True,
+        Action=DeleteChatAction(),
+    )
+    parsed = ChatDelete.FromString(evt.SerializeToString())
+    assert parsed.JID.User == "5551" and parsed.Timestamp == 1792000000 and parsed.DeleteMedia
+

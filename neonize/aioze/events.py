@@ -20,6 +20,7 @@ from ..proto.Neonize_pb2 import CallPreAccept as CallPreAcceptEv
 from ..proto.Neonize_pb2 import CallRelayLatency as CallRelayLatencyEv
 from ..proto.Neonize_pb2 import CallTerminate as CallTerminateEv
 from ..proto.Neonize_pb2 import CallTransport as CallTransportEv
+from ..proto.Neonize_pb2 import ChatDelete as ChatDeleteEv
 from ..proto.Neonize_pb2 import ChatPresence as ChatPresenceEv
 from ..proto.Neonize_pb2 import ClientOutdated as ClientOutdatedEv
 from ..proto.Neonize_pb2 import Connected as ConnectedEv
@@ -76,6 +77,7 @@ __all__ = [
     "CallRelayLatencyEv",
     "CallTerminateEv",
     "CallTransportEv",
+    "ChatDeleteEv",
     "ChatPresenceEv",
     "ClientOutdatedEv",
     "ConnectFailureEv",

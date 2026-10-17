@@ -22,6 +22,7 @@ from .proto.Neonize_pb2 import CallPreAccept as CallPreAcceptEv
 from .proto.Neonize_pb2 import CallRelayLatency as CallRelayLatencyEV
 from .proto.Neonize_pb2 import CallTerminate as CallTerminateEv
 from .proto.Neonize_pb2 import CallTransport as CallTransportEv
+from .proto.Neonize_pb2 import ChatDelete as ChatDeleteEv
 from .proto.Neonize_pb2 import ChatPresence as ChatPresenceEv
 from .proto.Neonize_pb2 import ClientOutdated as ClientOutdatedEv
 from .proto.Neonize_pb2 import Connected as ConnectedEv
@@ -102,6 +103,7 @@ EVENT_TO_INT: dict[type[Message], int] = {
     UnknownCallEventEV: 43,
     UndecryptableMessageEv: 44,
     RotateADVSecretEv: 45,
+    ChatDeleteEv: 51,
 }
 INT_TO_EVENT: dict[int, type[Message]] = {code: ev for ev, code in EVENT_TO_INT.items()}
 
