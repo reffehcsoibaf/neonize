@@ -72,3 +72,19 @@ def test_pair_phone_without_connect_raises_clean_error(tmp_path):
     c = NewClient(db_path)
     with pytest.raises(PairPhoneError, match="client is nil"):
         c.PairPhone("1234567890", True)
+
+
+def test_app_state_repair_methods_exist():
+    import inspect
+
+    from neonize.client import NewClient
+
+    assert list(inspect.signature(NewClient.fetch_app_state).parameters) == [
+        "self",
+        "name",
+        "full_sync",
+    ]
+    assert list(inspect.signature(NewClient.request_app_state_recovery).parameters) == [
+        "self",
+        "name",
+    ]
