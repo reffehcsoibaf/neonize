@@ -33,6 +33,7 @@ from ..proto.Neonize_pb2 import KeepAliveRestored as KeepAliveRestoredEv
 from ..proto.Neonize_pb2 import KeepAliveTimeout as KeepAliveTimeoutEv
 from ..proto.Neonize_pb2 import LoggedOut as LoggedOutEv
 from ..proto.Neonize_pb2 import Message as MessageEv
+from ..proto.Neonize_pb2 import MessageStar as MessageStarEv
 from ..proto.Neonize_pb2 import NewsletterJoin as NewsletterJoinEv
 from ..proto.Neonize_pb2 import NewsletterLeave as NewsletterLeaveEv
 from ..proto.Neonize_pb2 import NewsletterLiveUpdate as NewsletterLiveUpdateEv
@@ -89,6 +90,7 @@ __all__ = [
     "KeepAliveTimeoutEv",
     "LoggedOutEv",
     "MessageEv",
+    "MessageStarEv",
     "NewsLetterMessageMetaEv",
     "NewsletterJoinEv",
     "NewsletterLeaveEv",

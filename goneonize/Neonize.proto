@@ -896,6 +896,16 @@ message RotateADVSecret {
     required string OldSecret = 1;
     required string NewSecret = 2;
 }
+// Message starred or unstarred on another device (app state sync).
+message MessageStar { //53
+    required JID ChatJID = 1;
+    optional JID SenderJID = 2;
+    required bool IsFromMe = 3;
+    required string MessageID = 4;
+    required int64 Timestamp = 5;
+    optional WAWebProtobufSyncAction.StarAction Action = 6;
+    required bool FromFullSync = 7;
+}
 message UpdateGroupParticipantsReturnFunction {
     optional string Error = 1;
     repeated GroupParticipant participants = 2;

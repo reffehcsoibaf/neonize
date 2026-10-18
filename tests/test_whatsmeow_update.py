@@ -72,3 +72,28 @@ def test_pair_phone_without_connect_raises_clean_error(tmp_path):
     c = NewClient(db_path)
     with pytest.raises(PairPhoneError, match="client is nil"):
         c.PairPhone("1234567890", True)
+
+
+def test_message_star_event_is_registered():
+    from neonize.aioze import events as aio_events
+    from neonize.events import MessageStarEv
+    from neonize.proto.Neonize_pb2 import MessageStar
+    from neonize.proto.waSyncAction.WAWebProtobufSyncAction_pb2 import StarAction
+
+    assert EVENT_TO_INT[MessageStarEv] == 53
+    assert INT_TO_EVENT[53] is MessageStarEv
+    assert "MessageStarEv" in aio_events.__all__
+    assert aio_events.MessageStarEv is MessageStarEv
+
+    chat = JID(User="5551", RawAgent=0, Device=0, Integrator=0, Server="s.whatsapp.net")
+    evt = MessageStar(
+        ChatJID=chat,
+        IsFromMe=True,
+        MessageID="3EB0ABC",
+        Timestamp=1792000000,
+        FromFullSync=False,
+        Action=StarAction(starred=True),
+    )
+    parsed = MessageStar.FromString(evt.SerializeToString())
+    assert parsed.ChatJID.User == "5551" and parsed.MessageID == "3EB0ABC"
+    assert parsed.IsFromMe and parsed.Action.starred
