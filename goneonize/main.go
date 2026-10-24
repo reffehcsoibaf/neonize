@@ -16,8 +16,11 @@ import (
 	// "crypto/sha256"
 	// "encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -1096,6 +1099,125 @@ func Neonize(db *C.char, id *C.char, JIDByte *C.uchar, JIDSize C.int, newDevice 
 				}
 				eventChan <- &messageEvent
 			}
+		case *events.Archive:
+			if _, ok := subscribers[46]; ok {
+				chatState := defproto.ChatArchive{
+					JID:          utils.EncodeJidProto(v.JID),
+					Timestamp:    proto.Int64(v.Timestamp.Unix()),
+					Action:       v.Action,
+					FromFullSync: proto.Bool(v.FromFullSync),
+				}
+				messageEvent := MessageEvent{
+					eventType: 46,
+					message:   &chatState,
+				}
+				eventChan <- &messageEvent
+			}
+		case *events.Pin:
+			if _, ok := subscribers[47]; ok {
+				chatState := defproto.ChatPin{
+					JID:          utils.EncodeJidProto(v.JID),
+					Timestamp:    proto.Int64(v.Timestamp.Unix()),
+					Action:       v.Action,
+					FromFullSync: proto.Bool(v.FromFullSync),
+				}
+				messageEvent := MessageEvent{
+					eventType: 47,
+					message:   &chatState,
+				}
+				eventChan <- &messageEvent
+			}
+		case *events.Mute:
+			if _, ok := subscribers[48]; ok {
+				chatState := defproto.ChatMute{
+					JID:          utils.EncodeJidProto(v.JID),
+					Timestamp:    proto.Int64(v.Timestamp.Unix()),
+					Action:       v.Action,
+					FromFullSync: proto.Bool(v.FromFullSync),
+				}
+				messageEvent := MessageEvent{
+					eventType: 48,
+					message:   &chatState,
+				}
+				eventChan <- &messageEvent
+			}
+		case *events.MarkChatAsRead:
+			if _, ok := subscribers[49]; ok {
+				chatState := defproto.ChatMarkAsRead{
+					JID:          utils.EncodeJidProto(v.JID),
+					Timestamp:    proto.Int64(v.Timestamp.Unix()),
+					Action:       v.Action,
+					FromFullSync: proto.Bool(v.FromFullSync),
+				}
+				messageEvent := MessageEvent{
+					eventType: 49,
+					message:   &chatState,
+				}
+				eventChan <- &messageEvent
+			}
+		case *events.Lock:
+			if _, ok := subscribers[50]; ok {
+				chatState := defproto.ChatLock{
+					JID:          utils.EncodeJidProto(v.JID),
+					Timestamp:    proto.Int64(v.Timestamp.Unix()),
+					Action:       v.Action,
+					FromFullSync: proto.Bool(v.FromFullSync),
+				}
+				messageEvent := MessageEvent{
+					eventType: 50,
+					message:   &chatState,
+				}
+				eventChan <- &messageEvent
+			}
+		case *events.DeleteChat:
+			if _, ok := subscribers[51]; ok {
+				chatState := defproto.ChatDelete{
+					JID:          utils.EncodeJidProto(v.JID),
+					Timestamp:    proto.Int64(v.Timestamp.Unix()),
+					Action:       v.Action,
+					FromFullSync: proto.Bool(v.FromFullSync),
+					DeleteMedia:  proto.Bool(v.DeleteMedia),
+				}
+				messageEvent := MessageEvent{
+					eventType: 51,
+					message:   &chatState,
+				}
+				eventChan <- &messageEvent
+			}
+		case *events.DeleteForMe:
+			if _, ok := subscribers[52]; ok {
+				deleted := defproto.MessageDeleteForMe{
+					ChatJID:      utils.EncodeJidProto(v.ChatJID),
+					SenderJID:    utils.EncodeJidProto(v.SenderJID),
+					IsFromMe:     proto.Bool(v.IsFromMe),
+					MessageID:    proto.String(v.MessageID),
+					Timestamp:    proto.Int64(v.Timestamp.Unix()),
+					Action:       v.Action,
+					FromFullSync: proto.Bool(v.FromFullSync),
+				}
+				messageEvent := MessageEvent{
+					eventType: 52,
+					message:   &deleted,
+				}
+				eventChan <- &messageEvent
+			}
+		case *events.Star:
+			if _, ok := subscribers[53]; ok {
+				starred := defproto.MessageStar{
+					ChatJID:      utils.EncodeJidProto(v.ChatJID),
+					SenderJID:    utils.EncodeJidProto(v.SenderJID),
+					IsFromMe:     proto.Bool(v.IsFromMe),
+					MessageID:    proto.String(v.MessageID),
+					Timestamp:    proto.Int64(v.Timestamp.Unix()),
+					Action:       v.Action,
+					FromFullSync: proto.Bool(v.FromFullSync),
+				}
+				messageEvent := MessageEvent{
+					eventType: 53,
+					message:   &starred,
+				}
+				eventChan <- &messageEvent
+			}
 		case *events.RotateADVSecret:
 			if _, ok := subscribers[45]; ok {
 				rot := defproto.RotateADVSecret{
@@ -1934,6 +2056,24 @@ func SendAppState(id *C.char, patchByte *C.uchar, patchSize C.int) *C.char {
 	return C.CString("")
 }
 
+//export FetchAppState
+func FetchAppState(id *C.char, name *C.char, fullSync C.int) *C.char {
+	err := clients[C.GoString(id)].FetchAppState(context.Background(), appstate.WAPatchName(C.GoString(name)), fullSync != 0, false)
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	return C.CString("")
+}
+
+//export RequestAppStateRecovery
+func RequestAppStateRecovery(id *C.char, name *C.char) *C.char {
+	_, err := clients[C.GoString(id)].SendPeerMessage(context.Background(), whatsmeow.BuildAppStateRecoveryRequest(appstate.WAPatchName(C.GoString(name))))
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	return C.CString("")
+}
+
 //export SetDefaultDisappearingTimer
 func SetDefaultDisappearingTimer(id *C.char, timer C.int64_t) *C.char {
 	err := clients[C.GoString(id)].SetDefaultDisappearingTimer(context.Background(), time.Duration(int64(timer)))
@@ -2122,6 +2262,42 @@ func UpdateGroupParticipants(id *C.char, JIDByte *C.uchar, JIDSize C.int, partic
 		ParticipantChanges[i] = utils.DecodeJidProto(participant)
 	}
 	participants, err_changes := clients[C.GoString(id)].UpdateGroupParticipants(context.Background(), utils.DecodeJidProto(&JID), ParticipantChanges, whatsmeow.ParticipantChange(C.GoString(action)))
+	if err_changes != nil {
+		return_.Error = proto.String(err_changes.Error())
+	}
+	neonizeParticipants := make([]*defproto.GroupParticipant, len(participants))
+	for i, participant := range participants {
+		neonizeParticipants[i] = utils.EncodeGroupParticipant(participant)
+	}
+	return_.Participants = neonizeParticipants
+	return ProtoReturnV3(&return_)
+}
+
+//export UpdateGroupRequestParticipants
+func UpdateGroupRequestParticipants(id *C.char, JIDByte *C.uchar, JIDSize C.int, participantsChanges *C.uchar, participantSize C.int, action *C.char) *C.struct_BytesReturn {
+	var JID defproto.JID
+	var jidArray defproto.JIDArray
+	return_ := defproto.UpdateGroupParticipantsReturnFunction{}
+	err := proto.Unmarshal(getByteByAddr(JIDByte, JIDSize), &JID)
+	if err != nil {
+		return_.Error = proto.String(err.Error())
+		return ProtoReturnV3(&return_)
+	}
+	err_ := proto.Unmarshal(getByteByAddr(participantsChanges, participantSize), &jidArray)
+	if err_ != nil {
+		return_.Error = proto.String(err_.Error())
+		return ProtoReturnV3(&return_)
+	}
+	client, exists := clients[C.GoString(id)]
+	if !exists || client == nil {
+		return_.Error = proto.String("client not found")
+		return ProtoReturnV3(&return_)
+	}
+	participantChanges := make([]types.JID, len(jidArray.JIDS))
+	for i, participant := range jidArray.JIDS {
+		participantChanges[i] = utils.DecodeJidProto(participant)
+	}
+	participants, err_changes := client.UpdateGroupRequestParticipants(context.Background(), utils.DecodeJidProto(&JID), participantChanges, whatsmeow.ParticipantRequestChange(C.GoString(action)))
 	if err_changes != nil {
 		return_.Error = proto.String(err_changes.Error())
 	}
@@ -2615,4 +2791,170 @@ func FreeString(str *C.char) {
 	if str != nil {
 		C.free(unsafe.Pointer(str))
 	}
+}
+
+
+// ---- Transferencias de midia com progresso e cancelamento (TeleZapp) ------
+// O download grava direto no arquivo (DownloadToFile, sem carregar a midia
+// inteira na memoria) e o upload le de um arquivo (UploadReader). Cada
+// transferencia tem uma chave dada por quem chama: TransferProgress devolve
+// 0..100 (no upload; no download quem chama olha o tamanho do arquivo) e
+// TransferCancel interrompe.
+
+type transferencia struct {
+	cancel    context.CancelFunc
+	progresso atomic.Int32
+}
+
+var transferencias sync.Map // chave -> *transferencia
+
+func novaTransferencia(chave string) (context.Context, *transferencia) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t := &transferencia{cancel: cancel}
+	transferencias.Store(chave, t)
+	return ctx, t
+}
+
+//export TransferProgress
+func TransferProgress(key *C.char) C.int {
+	if t, ok := transferencias.Load(C.GoString(key)); ok {
+		return C.int(t.(*transferencia).progresso.Load())
+	}
+	return -1
+}
+
+//export TransferCancel
+func TransferCancel(key *C.char) {
+	if t, ok := transferencias.Load(C.GoString(key)); ok {
+		t.(*transferencia).cancel()
+	}
+}
+
+//export DownloadAnyToFile
+func DownloadAnyToFile(id *C.char, messageProto *C.uchar, size C.int, path *C.char, key *C.char) *C.char {
+	var message waE2E.Message
+	if err := proto.Unmarshal(getByteByAddr(messageProto, size), &message); err != nil {
+		return C.CString(err.Error())
+	}
+	var baixavel whatsmeow.DownloadableMessage
+	switch {
+	case message.ImageMessage != nil:
+		baixavel = message.ImageMessage
+	case message.VideoMessage != nil:
+		baixavel = message.VideoMessage
+	case message.AudioMessage != nil:
+		baixavel = message.AudioMessage
+	case message.DocumentMessage != nil:
+		baixavel = message.DocumentMessage
+	case message.StickerMessage != nil:
+		baixavel = message.StickerMessage
+	default:
+		return C.CString(whatsmeow.ErrNothingDownloadableFound.Error())
+	}
+	chave := C.GoString(key)
+	ctx, t := novaTransferencia(chave)
+	defer func() {
+		t.cancel()
+		transferencias.Delete(chave)
+	}()
+	arquivo, err := os.OpenFile(C.GoString(path), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	err = clients[C.GoString(id)].DownloadToFile(ctx, baixavel, arquivo)
+	if cerr := arquivo.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	return C.CString("")
+}
+
+// arquivoContador e o arquivo temporario do upload: conta o que se escreve
+// (cifrando, fase 1: de 0 a 10%) e o que se le (enviando, fase 2: de 10 a
+// 100%).
+type arquivoContador struct {
+	*os.File
+	t       *transferencia
+	total   int64
+	escrito atomic.Int64
+	lido    atomic.Int64
+	enviar  atomic.Bool
+}
+
+func (c *arquivoContador) Write(p []byte) (int, error) {
+	n, err := c.File.Write(p)
+	e := c.escrito.Add(int64(n))
+	if c.total > 0 {
+		v := e * 10 / c.total
+		if v > 10 {
+			v = 10
+		}
+		c.t.progresso.Store(int32(v))
+	}
+	return n, err
+}
+
+func (c *arquivoContador) Seek(off int64, whence int) (int64, error) {
+	if off == 0 && whence == io.SeekStart && c.escrito.Load() > 0 {
+		c.lido.Store(0)
+		c.enviar.Store(true)
+	}
+	return c.File.Seek(off, whence)
+}
+
+func (c *arquivoContador) Read(p []byte) (int, error) {
+	n, err := c.File.Read(p)
+	if c.enviar.Load() {
+		l := c.lido.Add(int64(n))
+		if e := c.escrito.Load(); e > 0 {
+			v := 10 + l*90/e
+			if v > 99 {
+				v = 99
+			}
+			c.t.progresso.Store(int32(v))
+		}
+	}
+	return n, err
+}
+
+//export UploadFile
+func UploadFile(id *C.char, path *C.char, mediatype C.int, key *C.char) *C.struct_BytesReturn {
+	return_ := defproto.UploadReturnFunction{}
+	origem, err := os.Open(C.GoString(path))
+	if err != nil {
+		return_.Error = proto.String(err.Error())
+		return ProtoReturnV3(&return_)
+	}
+	defer origem.Close()
+	info, err := origem.Stat()
+	if err != nil {
+		return_.Error = proto.String(err.Error())
+		return ProtoReturnV3(&return_)
+	}
+	temp, err := os.CreateTemp("", "telezapp-upload-*")
+	if err != nil {
+		return_.Error = proto.String(err.Error())
+		return ProtoReturnV3(&return_)
+	}
+	defer func() {
+		temp.Close()
+		os.Remove(temp.Name())
+	}()
+	chave := C.GoString(key)
+	ctx, t := novaTransferencia(chave)
+	defer func() {
+		t.cancel()
+		transferencias.Delete(chave)
+	}()
+	contador := &arquivoContador{File: temp, t: t, total: info.Size()}
+	resposta, err := clients[C.GoString(id)].UploadReader(ctx, origem, contador, utils.MediaType[int(mediatype)])
+	if err != nil {
+		return_.Error = proto.String(err.Error())
+	} else {
+		t.progresso.Store(100)
+	}
+	return_.UploadResponse = utils.EncodeUploadResponse(resposta)
+	return ProtoReturnV3(&return_)
 }

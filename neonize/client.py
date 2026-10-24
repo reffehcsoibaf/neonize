@@ -186,6 +186,7 @@ from .utils.enum import (
     MediaType,
     MediaTypeToMMS,
     ParticipantChange,
+    ParticipantRequestChange,
     Presence,
     PrivacySetting,
     PrivacySettingType,
@@ -1970,6 +1971,45 @@ class NewClient:
             return media.Binary
         return None
 
+    def tem_transferencias(self) -> bool:
+        """True se a DLL tem download e upload por arquivo com progresso."""
+        return hasattr(self.__client, "DownloadAnyToFile")
+
+    def download_any_to_file(self, message: Message, path: str, key: str) -> None:
+        """Baixa direto para *path* (sem carregar a midia na memoria).
+        *key* identifica a transferencia em transfer_cancel.
+
+        :raises DownloadError: Se o download falhar ou for cancelado.
+        """
+        msg_protobuf = message.SerializeToString()
+        erro = self.__client.DownloadAnyToFile(
+            self.uuid, msg_protobuf, len(msg_protobuf), path.encode(), key.encode()
+        )
+        if erro:
+            raise DownloadError(erro.decode(errors="replace"))
+
+    def upload_file(self, path: str, media_type: MediaType, key: str) -> UploadResponse:
+        """Envia o arquivo de *path* lendo do disco. transfer_progress(key)
+        devolve 0..100 enquanto roda e transfer_cancel(key) interrompe.
+
+        :raises UploadError: Se o envio falhar ou for cancelado.
+        """
+        protobytes = self.__client.UploadFile(
+            self.uuid, path.encode(), media_type.value, key.encode()
+        )
+        modelo = UploadReturnFunction.FromString(protobytes)
+        if modelo.Error:
+            raise UploadError(modelo.Error)
+        return modelo.UploadResponse
+
+    def transfer_progress(self, key: str) -> int:
+        """Progresso (0..100) do upload *key*; -1 se nao ha."""
+        return self.__client.TransferProgress(key.encode())
+
+    def transfer_cancel(self, key: str) -> None:
+        """Cancela o download ou upload *key*."""
+        self.__client.TransferCancel(key.encode())
+
     def download_media_with_path(
         self,
         direct_path: str,
@@ -2563,6 +2603,31 @@ class NewClient:
         if err:
             raise SendAppStateError(err)
 
+    def fetch_app_state(self, name: str, full_sync: bool = False):
+        """Fetches an app state collection (``regular_high``, ``regular_low``,
+        ``regular``, ``critical_block`` or ``critical_unblock_low``) from the
+        server, applying the pending patches. With ``full_sync`` the local copy
+        is discarded and downloaded again, which repairs a collection whose
+        patches no longer verify (``mismatching LTHash``).
+
+        :raises SendAppStateError: If the sync fails.
+        """
+        err = self.__client.FetchAppState(self.uuid, name.encode(), 1 if full_sync else 0).decode()
+        if err:
+            raise SendAppStateError(err)
+
+    def request_app_state_recovery(self, name: str):
+        """Asks the primary device to send a recovery snapshot of an app state
+        collection that keeps failing with ``mismatching LTHash`` even after a
+        full sync. The answer arrives later as a peer message and replaces the
+        local copy.
+
+        :raises SendAppStateError: If the request cannot be sent.
+        """
+        err = self.__client.RequestAppStateRecovery(self.uuid, name.encode()).decode()
+        if err:
+            raise SendAppStateError(err)
+
     def set_default_disappearing_timer(self, timer: timedelta | int):
         """
         Sets a default disappearing timer for messages. The timer can be specified as a timedelta or an integer.
@@ -2804,6 +2869,38 @@ class NewClient:
         jid_proto = jid.SerializeToString()
         jids_proto = neonize_proto.JIDArray(JIDS=participants_changes).SerializeToString()
         protobytes = self.__client.UpdateGroupParticipants(
+            self.uuid,
+            jid_proto,
+            len(jid_proto),
+            jids_proto,
+            len(jids_proto),
+            action.value.encode(),
+        )
+        model = neonize_proto.UpdateGroupParticipantsReturnFunction.FromString(protobytes)
+        if model.Error:
+            raise UpdateGroupParticipantsError(model.Error)
+        return model.participants
+
+    def update_group_request_participants(
+        self, jid: JID, participants: list[JID], action: ParticipantRequestChange
+    ) -> RepeatedCompositeFieldContainer[GroupParticipant]:
+        """
+        Approve or reject pending requests to join a group.
+
+        :param jid: The JID of the group.
+        :type jid: JID
+        :param participants: The JIDs of the users whose requests are answered.
+        :type participants: List[JID]
+        :param action: ParticipantRequestChange.APPROVE or ParticipantRequestChange.REJECT.
+        :type action: ParticipantRequestChange
+        :raises UpdateGroupParticipantsError: If the request fails (not connected, group not
+            found, not an admin, ...).
+        :return: One entry per participant, with the per-user result in ``Error`` (0 = ok).
+        :rtype: RepeatedCompositeFieldContainer[GroupParticipant]
+        """
+        jid_proto = jid.SerializeToString()
+        jids_proto = neonize_proto.JIDArray(JIDS=participants).SerializeToString()
+        protobytes = self.__client.UpdateGroupRequestParticipants(
             self.uuid,
             jid_proto,
             len(jid_proto),

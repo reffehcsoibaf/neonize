@@ -450,6 +450,10 @@ if not os.environ.get("SPHINX"):
     gocode.PairPhone.restype = ctypes.POINTER(Bytes)
     gocode.SendAppState.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
     gocode.SendAppState.restype = ctypes.c_void_p
+    gocode.FetchAppState.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
+    gocode.FetchAppState.restype = ctypes.c_void_p
+    gocode.RequestAppStateRecovery.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+    gocode.RequestAppStateRecovery.restype = ctypes.c_void_p
     gocode.SetDefaultDisappearingTimer.argtypes = [ctypes.c_char_p, ctypes.c_int64]
     gocode.SetDefaultDisappearingTimer.restype = ctypes.c_void_p
     gocode.SetDisappearingTimer.argtypes = [
@@ -527,6 +531,15 @@ if not os.environ.get("SPHINX"):
         ctypes.c_char_p,
     ]
     gocode.UpdateGroupParticipants.restype = ctypes.POINTER(Bytes)
+    gocode.UpdateGroupRequestParticipants.argtypes = [
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+    ]
+    gocode.UpdateGroupRequestParticipants.restype = ctypes.POINTER(Bytes)
     gocode.GetMessageForRetry.argtypes = [
         ctypes.c_char_p,
         ctypes.c_char_p,
@@ -679,6 +692,8 @@ if not os.environ.get("SPHINX"):
         "NewsletterSendReaction",
         "NewsletterToggleMute",
         "SendAppState",
+        "FetchAppState",
+        "RequestAppStateRecovery",
         "SetDefaultDisappearingTimer",
         "SetDisappearingTimer",
         "SetGroupAnnounce",
@@ -753,6 +768,7 @@ if not os.environ.get("SPHINX"):
         "SetPrivacySetting",
         "UpdateBlocklist",
         "UpdateGroupParticipants",
+        "UpdateGroupRequestParticipants",
         "GetMessageForRetry",
         "PutPushName",
         "GetContact",
@@ -768,6 +784,31 @@ if not os.environ.get("SPHINX"):
             getattr(gocode, _bytes_returning_func).errcheck = consume_bytes_struct
         except AttributeError:
             pass
+
+    # Transferencias de midia com progresso e cancelamento (TeleZapp): so
+    # existem na DLL de teste; sem elas o cliente cai nas funcoes antigas.
+    if hasattr(gocode, "DownloadAnyToFile"):
+        gocode.DownloadAnyToFile.argtypes = [
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_int,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+        gocode.DownloadAnyToFile.restype = ctypes.c_void_p
+        gocode.DownloadAnyToFile.errcheck = consume_cstring
+        gocode.TransferProgress.argtypes = [ctypes.c_char_p]
+        gocode.TransferProgress.restype = ctypes.c_int
+        gocode.TransferCancel.argtypes = [ctypes.c_char_p]
+        gocode.TransferCancel.restype = None
+        gocode.UploadFile.argtypes = [
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_int,
+            ctypes.c_char_p,
+        ]
+        gocode.UploadFile.restype = ctypes.POINTER(Bytes)
+        gocode.UploadFile.errcheck = consume_bytes_struct
 
 else:
     gocode: Any = object()
