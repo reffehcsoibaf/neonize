@@ -454,6 +454,22 @@ if not os.environ.get("SPHINX"):
     gocode.FetchAppState.restype = ctypes.c_void_p
     gocode.RequestAppStateRecovery.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
     gocode.RequestAppStateRecovery.restype = ctypes.c_void_p
+    gocode.RequestHistorySync.argtypes = [
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_int64,
+        ctypes.c_int,
+    ]
+    gocode.RequestHistorySync.restype = ctypes.c_void_p
+    gocode.RequestUnavailableMessage.argtypes = [
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+    ]
+    gocode.RequestUnavailableMessage.restype = ctypes.c_void_p
     gocode.SetDefaultDisappearingTimer.argtypes = [ctypes.c_char_p, ctypes.c_int64]
     gocode.SetDefaultDisappearingTimer.restype = ctypes.c_void_p
     gocode.SetDisappearingTimer.argtypes = [
@@ -694,6 +710,8 @@ if not os.environ.get("SPHINX"):
         "SendAppState",
         "FetchAppState",
         "RequestAppStateRecovery",
+        "RequestHistorySync",
+        "RequestUnavailableMessage",
         "SetDefaultDisappearingTimer",
         "SetDisappearingTimer",
         "SetGroupAnnounce",

@@ -2074,6 +2074,47 @@ func RequestAppStateRecovery(id *C.char, name *C.char) *C.char {
 	return C.CString("")
 }
 
+//export RequestHistorySync
+func RequestHistorySync(id *C.char, chat *C.char, msgID *C.char, fromMe C.int, timestamp C.int64_t, count C.int) *C.char {
+	cli := clients[C.GoString(id)]
+	jid, err := types.ParseJID(C.GoString(chat))
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	seconds := int64(timestamp)
+	if seconds > 100000000000 { // o neonize ora entrega milissegundos
+		seconds /= 1000
+	}
+	info := &types.MessageInfo{
+		MessageSource: types.MessageSource{Chat: jid, IsFromMe: fromMe != 0},
+		ID:            types.MessageID(C.GoString(msgID)),
+		Timestamp:     time.Unix(seconds, 0),
+	}
+	_, err = cli.SendPeerMessage(context.Background(), cli.BuildHistorySyncRequest(info, int(count)))
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	return C.CString("")
+}
+
+//export RequestUnavailableMessage
+func RequestUnavailableMessage(id *C.char, chat *C.char, sender *C.char, msgID *C.char) *C.char {
+	cli := clients[C.GoString(id)]
+	chatJID, err := types.ParseJID(C.GoString(chat))
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	senderJID, err := types.ParseJID(C.GoString(sender))
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	_, err = cli.SendPeerMessage(context.Background(), cli.BuildUnavailableMessageRequest(chatJID, senderJID, C.GoString(msgID)))
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	return C.CString("")
+}
+
 //export SetDefaultDisappearingTimer
 func SetDefaultDisappearingTimer(id *C.char, timer C.int64_t) *C.char {
 	err := clients[C.GoString(id)].SetDefaultDisappearingTimer(context.Background(), time.Duration(int64(timer)))

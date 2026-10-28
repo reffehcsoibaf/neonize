@@ -2628,6 +2628,40 @@ class NewClient:
         if err:
             raise SendAppStateError(err)
 
+    def request_history_sync(self, message_info: MessageInfo, count: int = 50):
+        """Asks the primary device for up to ``count`` messages immediately
+        before ``message_info`` in its chat. The answer arrives later as a
+        HistorySyncEv of type ON_DEMAND.
+
+        :raises SendAppStateError: If the request cannot be sent.
+        """
+        src = message_info.MessageSource
+        err = self.__client.RequestHistorySync(
+            self.uuid,
+            Jid2String(src.Chat).encode(),
+            message_info.ID.encode(),
+            1 if src.IsFromMe else 0,
+            int(message_info.Timestamp),
+            int(count),
+        ).decode()
+        if err:
+            raise SendAppStateError(err)
+
+    def request_unavailable_message(self, chat: JID, sender: JID, message_id: str):
+        """Asks the primary device to resend a message this client could not
+        decrypt. The answer arrives later as a normal message event.
+
+        :raises SendAppStateError: If the request cannot be sent.
+        """
+        err = self.__client.RequestUnavailableMessage(
+            self.uuid,
+            Jid2String(chat).encode(),
+            Jid2String(sender).encode(),
+            message_id.encode(),
+        ).decode()
+        if err:
+            raise SendAppStateError(err)
+
     def set_default_disappearing_timer(self, timer: timedelta | int):
         """
         Sets a default disappearing timer for messages. The timer can be specified as a timedelta or an integer.
